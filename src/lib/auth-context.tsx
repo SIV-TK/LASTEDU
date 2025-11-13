@@ -109,38 +109,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Convert Firebase user to our User type
-  const mapFirebaseUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
-    if (!firebaseUser) return null;
+  const mapFirebaseUser = async (firebaseUser: FirebaseUser | null): Promise<User | null> => {
+    if (!firebaseUser?.uid || !firebaseUser?.email) return null;
 
     try {
       // Get user document from Firestore
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      const userData = userDoc.data();
+      const userData = userDoc.exists() ? userDoc.data() : null;
 
       const user: User = {
         uid: firebaseUser.uid,
-        email: firebaseUser.email || '',
+        email: firebaseUser.email,
         displayName: firebaseUser.displayName || userData?.displayName || 'User',
         role: userData?.role || 'student',
-        photoURL: firebaseUser.photoURL || userData?.photoURL,
-        createdAt: userData?.createdAt?.toDate() || new Date(),
+        photoURL: firebaseUser.photoURL || userData?.photoURL || undefined,
+        createdAt: userData?.createdAt?.toDate?.() || new Date(),
         lastLogin: new Date(),
       };
 
       // Create or refresh session
-      const clientInfo = getClientInfo();
-      const sessionToken = await SessionManager.createSession({
-        userId: user.uid,
-        email: user.email,
-        role: user.role,
-        displayName: user.displayName,
-        ...clientInfo
-      });
+      try {
+        const clientInfo = getClientInfo();
+        const sessionToken = await SessionManager.createSession({
+          userId: user.uid,
+          email: user.email,
+          role: user.role,
+          displayName: user.displayName,
+          ...clientInfo
+        });
 
-      // Get session data
-      const sessionData = await SessionManager.getSession(sessionToken);
-      if (sessionData) {
-        user.sessionData = sessionData;
+        // Get session data
+        const sessionData = await SessionManager.getSession(sessionToken);
+        if (sessionData) {
+          user.sessionData = sessionData;
+        }
+      } catch (sessionError) {
+        console.warn('Session creation failed:', sessionError);
+        // Continue without session data
       }
 
       return user;
@@ -205,11 +210,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         const userCredential = await signInWithEmailAndPassword(authInstance, email, password);
-        const user = await mapFirebaseUser(userCredential.user);
+        const mappedUser = await mapFirebaseUser(userCredential.user);
         
-        if (!user) {
+        if (!mappedUser) {
           throw new Error('Failed to authenticate user');
         }
+        
+        const user = mappedUser;
 
         // Update last login
         await setDoc(doc(db, 'users', user.uid), {
@@ -260,10 +267,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userData);
 
-      const user = await mapFirebaseUser(userCredential.user);
-      if (!user) {
+      const mappedUser = await mapFirebaseUser(userCredential.user);
+      if (!mappedUser) {
         throw new Error('Failed to create user');
       }
+      
+      const user = mappedUser;
 
       // Set authentication cookies for middleware
       setAuthCookies(user);
