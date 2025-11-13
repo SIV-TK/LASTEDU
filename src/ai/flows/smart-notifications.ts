@@ -10,8 +10,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { validateAndFormatResponse } from '@/ai/response-formatter';
-import { deepseekChat } from 'genkitx-deepseek';
 import { z } from 'genkit';
 
 // Input Schema
@@ -87,7 +85,7 @@ const prompt = ai.definePrompt({
   name: 'smartNotificationsPrompt',
   input: { schema: SmartNotificationsInputSchema },
   output: { schema: SmartNotificationsOutputSchema },
-  model: deepseekChat,
+  model: 'deepseek/deepseek-chat',
   prompt: `You are an AI learning assistant that generates personalized, timely notifications to help students stay engaged and motivated in their learning journey.
 
   **Student Context:**
@@ -143,16 +141,7 @@ const smartNotificationsFlow = ai.defineFlow(
       const { output } = await prompt(input);
       const result = output || {};
       
-      const formattedResult: Record<string, any> = {};
-      for (const [key, value] of Object.entries(result)) {
-        if (typeof value === 'string') {
-          formattedResult[key] = validateAndFormatResponse(value, 'educational');
-        } else {
-          formattedResult[key] = value;
-        }
-      }
-      
-      return formattedResult as SmartNotificationsOutput;
+      return result as SmartNotificationsOutput;
     } catch (error) {
       console.error('Error generating smart notifications:', error);
       

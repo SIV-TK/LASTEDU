@@ -36,10 +36,7 @@ const prompt = ai.definePrompt({
   name: 'generateProgressInsightsPrompt',
   input: {schema: GenerateProgressInsightsInputSchema},
   model: deepseekChat,
-  model: deepseekChat,
   output: {schema: GenerateProgressInsightsOutputSchema},
-  model: deepseekChat,
-  model: deepseekChat,
   prompt: `You are an encouraging and insightful academic advisor. Analyze the following progress data for the subject '{{{subject}}}'.
 
   Your task is to provide a brief, actionable analysis of the student's performance. The tone should be positive and constructive.
@@ -64,15 +61,6 @@ const generateProgressInsightsFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    const result = output || {};
-    const formattedResult = {};
-    for (const [key, value] of Object.entries(result)) {
-      if (typeof value === 'string') {
-        formattedResult[key] = validateAndFormatResponse(value, 'general');
-      } else {
-        formattedResult[key] = value;
-      }
-    }
-    return formattedResult as any;;
+    return output as GenerateProgressInsightsOutput;
   }
 );
