@@ -8,8 +8,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {validateAndFormatResponse} from '@/ai/response-formatter';
-import {deepseekChat} from 'genkitx-deepseek';
 import {z} from 'genkit';
 
 const ProgressDataItemSchema = z.object({
@@ -32,26 +30,7 @@ export async function generateProgressInsights(input: GenerateProgressInsightsIn
   return generateProgressInsightsFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateProgressInsightsPrompt',
-  input: {schema: GenerateProgressInsightsInputSchema},
-  model: deepseekChat,
-  output: {schema: GenerateProgressInsightsOutputSchema},
-  prompt: `You are an encouraging and insightful academic advisor. Analyze the following progress data for the subject '{{{subject}}}'.
 
-  Your task is to provide a brief, actionable analysis of the student's performance. The tone should be positive and constructive.
-  
-  - Highlight strengths, such as significant improvements or consistent high performance. For example: "Great job on the consistent progress in May and June!"
-  - Gently point out areas for focus if you see a dip in performance. For example: "It looks like there was a small dip in March; perhaps reviewing that month's topics would be helpful."
-  - Keep the overall analysis concise (2-3 sentences).
-  
-  Here is the student's data:
-  {{#each progressData}}
-  - **{{month}}**: {{progress}}%
-  {{/each}}
-  
-  Generate the analysis now.`,
-});
 
 const generateProgressInsightsFlow = ai.defineFlow(
   {
@@ -60,7 +39,17 @@ const generateProgressInsightsFlow = ai.defineFlow(
     outputSchema: GenerateProgressInsightsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output as GenerateProgressInsightsOutput;
+    try {
+      const result = await ai.generate({
+        model: 'deepseek/deepseek-chat',
+        prompt: `Analyze progress data for ${input.subject}: ${input.progressData.map(d => `${d.month}: ${d.progress}%`).join(', ')}. Provide 2-3 encouraging sentences highlighting strengths and areas for improvement.`,
+        output: { schema: GenerateProgressInsightsOutputSchema }
+      });
+      
+      return result.output() as GenerateProgressInsightsOutput;
+    } catch (error) {
+      console.error('Progress insights generation failed:', error);
+      return { insights: 'Your progress shows dedication to learning. Keep up the consistent effort!' };
+    }
   }
 );
