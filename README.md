@@ -322,6 +322,9 @@ src/ai/
 - **Emotional Intelligence**: Mood-aware learning recommendations
 
 ---
+### How system works with a video
+
+https://drive.google.com/file/d/11GuVZbZqGOxGv7A4e1A07LxwpgYTfdw2/view?usp=sharing
 
 **Built with ❤️ for the future of education**
 
